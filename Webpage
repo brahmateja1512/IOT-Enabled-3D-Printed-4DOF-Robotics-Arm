@@ -1,0 +1,104 @@
+/*
+  webpage.h
+  Web UI served by the ESP32. Uses WebSocket to send/receive realtime commands.
+*/
+const char index_html[] = R"rawliteral(
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP32 4DOF Robot Arm</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:12px;background:#f7f7f7}
+    .card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.08);margin-bottom:12px}
+    .row{display:flex;gap:12px;align-items:center}
+    .slider{flex:1}
+    .val{width:48px;text-align:right}
+    button{padding:8px 12px;border:none;background:#1976d2;color:#fff;border-radius:4px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <h2>ESP32 4DOF Robot Arm</h2>
+  <div id="status" class="card">Connecting...</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <strong>Joint Controls</strong>
+      <div>
+        <button id="homeBtn">Home</button>
+      </div>
+    </div>
+    <div id="controls"></div>
+  </div>
+<script>
+const joints = 4;
+const minAngle=0, maxAngle=180;
+const controlsDiv = document.getElementById('controls');
+const statusDiv = document.getElementById('status');
+let ws;
+
+function createControl(i) {
+  const container = document.createElement('div');
+  container.style.marginTop='10px';
+  const label = document.createElement('div');
+  label.textContent='Joint '+(i+1);
+  container.appendChild(label);
+  const row = document.createElement('div'); row.className='row';
+  const s = document.createElement('input'); s.type='range'; s.min=minAngle; s.max=maxAngle; s.value=90; s.className='slider'; s.id='s'+i;
+  const v = document.createElement('div'); v.className='val'; v.id='v'+i; v.textContent=s.value+'°';
+  s.addEventListener('input', ()=>{ v.textContent = s.value+'°'; });
+  s.addEventListener('change', ()=> {
+    const msg = { cmd: "move" };
+    msg['j'+(i+1)] = parseInt(s.value);
+    ws.send(JSON.stringify(msg));
+    statusDiv.textContent = 'Sent move for joint '+(i+1);
+  });
+  row.appendChild(s); row.appendChild(v); container.appendChild(row); controlsDiv.appendChild(container);
+}
+
+for (let i=0;i<joints;i++) createControl(i);
+
+document.getElementById('homeBtn').addEventListener('click', ()=> {
+  for (let i=0;i<joints;i++){ document.getElementById('s'+i).value = 90; document.getElementById('v'+i).textContent='90°'; }
+  ws.send(JSON.stringify({cmd:'home'}));
+});
+
+function connectWS() {
+  const protocol = (location.protocol === 'https:') ? 'wss' : 'ws';
+  ws = new WebSocket(protocol + '://' + location.hostname + ':81/');
+  ws.onopen = ()=>{ statusDiv.textContent = 'WebSocket connected'; requestState(); };
+  ws.onmessage = (evt)=> {
+    try {
+      const data = JSON.parse(evt.data);
+      // update sliders if j1..j4 present
+      for (let i=0;i<joints;i++){
+        const key = 'j'+(i+1);
+        if (data[key] !== undefined) {
+          document.getElementById('s'+i).value = data[key];
+          document.getElementById('v'+i).textContent = data[key] + '°';
+        }
+      }
+    } catch(e){ console.log('ws parse error', e); }
+  };
+  ws.onclose = ()=>{ statusDiv.textContent='WebSocket disconnected. Reconnecting in 2s.'; setTimeout(connectWS,2000); };
+  ws.onerror = ()=>{ /* ignore */ };
+}
+
+function requestState() {
+  // simple GET to /api/state to ensure initial values synced
+  fetch('/api/state').then(r=>r.json()).then(j=>{
+    for (let i=0;i<joints;i++){
+      const key = 'j'+(i+1);
+      if (j[key] !== undefined) {
+        document.getElementById('s'+i).value = j[key];
+        document.getElementById('v'+i).textContent = j[key] + '°';
+      }
+    }
+  }).catch(e=>console.log('state fetch',e));
+}
+
+connectWS();
+</script>
+</body>
+</html>
+)rawliteral";
