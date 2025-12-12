@@ -1,4 +1,4 @@
-## 🛠️ 3D Printing Procedure
+## 🛠️ 3D Printing Procedure for Robotics Arm
 
 This section details the manufacturing process for the 4DOF Robotic Arm using FDM 3D printing. All `.stl` files can be found in the `/STL_Files` directory of this repository.
 
