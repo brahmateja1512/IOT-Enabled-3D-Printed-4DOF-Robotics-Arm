@@ -1,0 +1,87 @@
+## 🛠️ 3D Printing Procedure
+
+This document describes the recommended process for manufacturing the 4‑DOF robotic arm using FDM 3D printing. All STL files are located in the /STL_Files directory of this repository.
+
+### 1. Prerequisites
+- 3D printer with a minimum build volume of 200 × 200 × 200 mm (examples: Creality Ender 3, Prusa i3).
+- Filament: PLA+ or PETG is recommended.
+  - Note: Standard PLA can be brittle for high‑torque joints; prefer PLA+ or PETG for improved durability.
+- Slicer software: Cura, PrusaSlicer, or Simplify3D.
+
+### 2. Slicer configuration
+Use these baseline settings to balance strength, print time, and part accuracy. Adjust as needed for your machine and filament.
+
+| Setting | Recommended value | Why |
+|---|---:|---|
+| Layer height | 0.20 mm | Good balance of surface quality and speed |
+| Wall / Perimeter count | 3–4 | Most structural strength comes from the walls |
+| Infill density | 30%–40% | Provides internal support for fasteners and load paths |
+| Infill pattern | Gyroid or Cubic | More isotropic strength under multidirectional loads |
+| Supports | Enabled (Tree/Organic or regular) | Needed for overhangs in joint connectors and housings |
+| Build plate adhesion | Brim (or Skirt for smaller parts) | Prevents warping on large, flat surfaces |
+| Print speed (load-bearing parts) | 40–60 mm/s | Slower improves dimensional accuracy and layer adhesion |
+| Print speed (fine/gear parts) | 30–45 mm/s | Helps ensure proper gear meshing and fit |
+
+Replace the image path below with your actual screenshot if desired:
+![Slicer Settings Example](path/to/your/slicer-image.png)
+
+### 3. Printing strategy and part batches
+Print parts in logical batches to simplify assembly and quality control.
+
+- Batch A — Base and rotating components
+  - Files: `Base_Plate.stl`, `Turntable_Gear.stl`
+  - Orientation: Print flat on the large face (large flat side down)
+  - Notes: No supports usually needed for the plate; use a brim for adhesion
+
+- Batch B — Load‑bearing links (shoulder, elbow)
+  - Files: `Shoulder_Link.stl`, `Elbow_Link.stl`
+  - Orientation: Print on their sides (do not print standing vertically)
+  - Notes: Layer orientation affects strength — printing on the side avoids layer‑line weakness under bending loads
+
+- Batch C — Gripper and precision parts
+  - Files: `Claw_Left.stl`, `Claw_Right.stl`, `Servo_Housing.stl`
+  - Orientation: Print for best detail on mating surfaces
+  - Settings: Reduce print speed to ~40 mm/s for accurate tooth/slot geometry
+
+### 4. Recommended per‑part adjustments
+- Thin features (tabs, clips): increase wall count and reduce layer height to 0.12–0.16 mm if detail is critical.
+- Gear teeth: enable a small amount of horizontal expansion (or test fit and adjust) to avoid tight meshing.
+- Servo mounts: keep tolerances tight but leave a small clearance (0.2–0.5 mm) depending on your printer calibration.
+
+### 5. Post‑processing
+1. Support removal: use flush cutters or needle‑nose pliers; take care around small features and servo horn slots.
+2. Deburring and sanding: sand mating and rotating surfaces with 200–400 grit paper to reduce friction.
+3. Hole sizing: if M3/M4 holes are too tight, carefully ream with the correct sized drill bit or use a heated screw to enlarge the hole to the desired fit.
+4. Test fit servos: dry fit each servo and mounting hardware before final assembly; the fit should be snug without forcing or deforming parts.
+5. Optional: light application of PTFE or silicone spray on sliding surfaces to reduce friction (avoid contaminating servo electronics).
+
+### 6. Fasteners and assembly
+- Use stainless steel M3 or M4 screws per the design holes. Countersunk or pan head as required by the part geometry.
+- Use lock washers or thread locker (e.g., Loctite Blue 242) on fasteners subject to vibration.
+- Tighten screws incrementally and check for binding; do not over‑torque plastic threads — consider using metal threaded inserts (heat‑set inserts) for repeated assembly/disassembly.
+
+### 7. Calibration and alignment
+- Verify each servo's neutral (90°) position corresponds to the arm's intended neutral pose; add code offsets or mechanical shims if needed.
+- If a joint appears reversed, either invert the servo mapping in firmware or flip the servo horn during mechanical assembly.
+- After initial assembly, perform a slow homing routine to confirm full travel ranges and check for collisions.
+
+### 8. Troubleshooting — common print issues
+- Warping: increase bed temperature by 5°C, use brim, or apply a PEI sheet / glue stick.
+- Layer separation (delamination): increase nozzle temperature by 5–10°C and reduce cooling for first layers.
+- Dimensional inaccuracy: calibrate extrusion multiplier and measure single‑wall test prints; adjust slicer horizontal expansion if needed.
+- Stripped plastic threads: use heat‑set inserts or switch to through‑bolts with nuts behind the part.
+
+### 9. Safety notes
+- Keep fingers and loose objects away from the arm while testing motions.
+- Use a power supply capable of handling peak servo currents; do not power multiple servos from the ESP32 5V regulator.
+- Ensure a common ground between the ESP32 and the servo power supply.
+
+### 10. Tips for improved durability
+- Use PETG for parts requiring impact resistance or slight flex (e.g., tabs and snaps).
+- Consider printing high‑stress brackets with 100% infill and additional walls.
+- Add metal reinforcement (small plates or brackets) at high‑load contact points if long‑term durability is required.
+
+If you want, I can:
+- Add per‑part recommended slicer profiles (Cura/PrusaSlicer) in the repository.
+- Produce annotated photos showing recommended print orientations and support locations.
+- Provide a short assembly guide with step‑by‑step photos or diagrams.
