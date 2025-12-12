@@ -1,0 +1,74 @@
+/*
+  ik.h
+  Simple inverse kinematics helper for a 3-link planar arm + base rotation.
+
+  This is a basic approximation:
+  - j1: base rotation (degrees) = atan2(y,x)
+  - j2/j3: solved using 2D planar 2-link IK for reach in XY plane considering shoulder and elbow
+  - j4: left as grip (passed separately)
+
+  NOTE: You must adapt link lengths (L1,L2,L3) to match your printed arm.
+  This function returns angles in degrees and does not consider collisions, mechanical offsets,
+  or servo mounting orientations. Use it as a starting point and calibrate for your geometry.
+*/
+
+#ifndef IK_H
+#define IK_H
+
+#include <math.h>
+
+// Link lengths in mm (change to match your arm)
+const float L1 = 70.0;   // shoulder to elbow
+const float L2 = 90.0;   // elbow to wrist
+const float L3 = 60.0;   // wrist to gripper (used minimally)
+
+bool computeIK(float x, float y, float z, float outAngles[4]) {
+  // Compute base rotation
+  float base = atan2(y, x); // radians
+
+  // Effective planar distance from shoulder (projected)
+  float r = sqrt(x*x + y*y);
+  float zEff = z; // if you need offsets, adjust
+
+  // Convert to 2D link problem: shoulder at origin, target at (r, zEff)
+  float dx = r;
+  float dz = zEff;
+
+  float d = sqrt(dx*dx + dz*dz);
+  // Reachability check
+  if (d > (L1 + L2 + L3) || d < fabs(L1 - L2)) {
+    return false;
+  }
+
+  // Reduce the effective target by L3 (wrist length), approximate
+  float reach = max(0.0f, d - L3);
+
+  // Law of cosines for angle at elbow
+  float cosA = (L1*L1 + L2*L2 - reach*reach) / (2 * L1 * L2);
+  cosA = constrain(cosA, -1.0f, 1.0f);
+  float angleElbow = acos(cosA); // radians
+
+  // Angle between shoulder and target
+  float cosB = (L1*L1 + reach*reach - L2*L2) / (2 * L1 * reach);
+  cosB = constrain(cosB, -1.0f, 1.0f);
+  float angleShoulderOffset = acos(cosB); // radians
+
+  float angleToTarget = atan2(dz, dx);
+
+  float shoulder = angleToTarget - angleShoulderOffset;
+
+  // Convert to degrees
+  float j1 = degrees(base);
+  float j2 = degrees(shoulder);
+  float j3 = degrees(angleElbow);
+
+  // Map to typical servo orientation expectations (may need flipping or offset)
+  outAngles[0] = j1;
+  outAngles[1] = j2;
+  outAngles[2] = j3;
+  outAngles[3] = 90.0; // default grip
+
+  return true;
+}
+
+#endif
